@@ -1,0 +1,8 @@
+<h3>Video Call</h3>
+<div style="float: left; width: 25%; height: 25%; margin: 20px;" *ngFor="let participant of participants | keyvalue">
+    {{participant.value.name}}
+    <participant-video [muted]="id==participant.key" [stream]="participant.value.stream"></participant-video>
+</div>
+
+<button (click)="end()">End the call</button>
+<button (click)="leave()">Leave the call</button>
