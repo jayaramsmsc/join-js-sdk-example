@@ -91,6 +91,37 @@ export class CallComponent implements OnInit {
         }
     }
 
+    public mute(type: "audio"| "video"){
+        if(this.participants[this.id].stream){
+            if(type == "audio"){
+                this.participants[this.id].stream.getAudioTracks()[0].enabled = false;
+            }else{
+                console.log("video")
+                this.participants[this.id].stream.getVideoTracks()[0].enabled = false;
+            }
+        }
+        this._conference.mute(type).then((status) => {
+            if(status){
+                this.participants[this.id][type] = false;
+            }
+        })
+    }
+
+    public unmute(type: "audio"| "video"){
+        if(this.participants[this.id].stream){
+            if(type == "audio"){
+                this.participants[this.id].stream.getAudioTracks()[0].enabled = true;
+            }else{
+                this.participants[this.id].stream.getVideoTracks()[0].enabled = true;
+            }
+        }
+        this._conference.unMute(type).then((status) => {
+            if(status){
+                this.participants[this.id][type] = true;
+            }
+        });
+    }
+
     private _clearAllStreams(){
         let selfStream = this.participants[this.id].stream
         if(selfStream){
@@ -164,6 +195,12 @@ export class CallComponent implements OnInit {
             conference.on("end", () => {
                 this._clearAllStreams();
                 this._router.navigate(["/"]);
+            });
+
+            conference.on("mute", ({ id, roomId, mediaType, value }) => {
+                if(id && this.participants[id]){
+                    this.participants[id][mediaType] = value;
+                }
             });
 
         }).catch((err) => {

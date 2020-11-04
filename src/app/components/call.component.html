@@ -1,8 +1,14 @@
 <h3>Video Call</h3>
 <div style="float: left; width: 25%; height: 25%; margin: 20px;" *ngFor="let participant of participants | keyvalue">
-    {{participant.value.name}}
+    {{participant.value.name}} -- audio: {{participant.value.audio}}, video: {{participant.value.video}}
     <participant-video [muted]="id==participant.key" [stream]="participant.value.stream"></participant-video>
 </div>
 
 <button (click)="end()">End the call</button>
 <button (click)="leave()">Leave the call</button>
+<ng-container *ngIf="participants[id]">
+    <button *ngIf="participants[id].video" (click)="mute('video')">Video mute</button>
+    <button *ngIf="participants[id].audio" (click)="mute('audio')">Audio mute</button>
+    <button *ngIf="!participants[id].video" (click)="unmute('video')">Video unmute</button>
+    <button *ngIf="!participants[id].audio" (click)="unmute('audio')">Audio unmute</button>
+</ng-container>
