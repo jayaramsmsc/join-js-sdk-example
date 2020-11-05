@@ -12,3 +12,8 @@
     <button *ngIf="!participants[id].video" (click)="unmute('video')">Video unmute</button>
     <button *ngIf="!participants[id].audio" (click)="unmute('audio')">Audio unmute</button>
 </ng-container>
+<br/>
+<div>
+    <button *ngIf="!presenting" (click)="startScreenShare()">Start Screenshare</button>
+    <button *ngIf="presenting" (click)="stopScreenShare()">Stop Screenshare</button>
+</div>

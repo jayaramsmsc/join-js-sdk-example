@@ -1,7 +1,7 @@
 import { Component, OnInit } from "@angular/core";
 import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
-import { getMediaStream, makeRequest } from '../helpers';
+import { fetchScreenShareStream, getMediaStream, makeRequest, fetchAudioStream } from '../helpers';
 import * as Telebu from "join-js-sdk";
 import { Conference } from 'join-js-sdk/dist/types/conference';
 import { IParticipantDetails } from 'join-js-sdk/dist/types/interfaces';
@@ -30,7 +30,7 @@ export class CallComponent implements OnInit {
     private _conference: Conference;
     private _publication: any;
     public id: string; 
-
+    public presenting: boolean = false;
     constructor(private _route: ActivatedRoute, private _router: Router){
         
     }
@@ -56,6 +56,26 @@ export class CallComponent implements OnInit {
                 console.error(err);
             }
             
+        });
+    }
+
+    public startScreenShare(){
+        fetchScreenShareStream().then(async (screenShareStream: MediaStream) => {
+            let audioStream = await fetchAudioStream();
+            audioStream.getAudioTracks().forEach((track) => {
+                screenShareStream.addTrack(track);
+            });
+            this._clearAllStreams();
+            this.presenting = true;
+            this._publishStream("screen-cast", screenShareStream);
+        });
+    }
+
+    public stopScreenShare(){
+        this._clearAllStreams();
+        this.presenting = false;
+        getMediaStream().then((stream) => {
+            this._publishStream("camera", stream);
         });
     }
 
@@ -134,6 +154,17 @@ export class CallComponent implements OnInit {
         }
     }
 
+    private _publishStream(type: "camera"|"screen-cast", stream: MediaStream){
+        this._clearAllStreams();
+        this.participants[this.id].stream = stream;
+        this._conference.publish(stream, type, 400).then((pub) => {
+            console.log("successfully published", pub);
+            this._publication = pub;
+        }).catch((err) => {
+            console.error("publication error", err);
+        });
+    }
+
     private _startCall(token: string, id: string, name: string){
         Telebu.join( token, id, { id, name }).then((conference: Conference) => {
             console.log(conference);
@@ -152,13 +183,14 @@ export class CallComponent implements OnInit {
             conference.remoteStreams.forEach(this._streamAdded.bind(this));
 
             getMediaStream().then((stream) => {
-                this.participants[this.id].stream = stream;
-                conference.publish(stream, "camera", 400).then((pub) => {
-                    console.log("successfully published", pub);
-                    this._publication = pub;
-                }).catch((err) => {
-                    console.error("publication error", err);
-                });
+                this._publishStream("camera", stream);
+                // this.participants[this.id].stream = stream;
+                // conference.publish(stream, "camera", 400).then((pub) => {
+                //     console.log("successfully published", pub);
+                //     this._publication = pub;
+                // }).catch((err) => {
+                //     console.error("publication error", err);
+                // });
             });
 
             conference.on("participantAdded", (data) => {

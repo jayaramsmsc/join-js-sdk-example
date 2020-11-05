@@ -35,6 +35,29 @@ export function makeRequest(url: string, method: "GET"|"POST", body: any, header
     );
 }
 
+export function fetchScreenShareStream(): Promise<MediaStream> {
+    let displayMediaOptions = {
+        video: {
+            cursor: "never",
+            frameRate: 18
+        },
+        audio: false
+    };
+
+    if (navigator.mediaDevices['getDisplayMedia']) {
+        return navigator.mediaDevices['getDisplayMedia'](displayMediaOptions);
+    }
+    else if (navigator['getDisplayMedia']) {
+        return navigator['getDisplayMedia'](displayMediaOptions as MediaStreamConstraints);
+    } else {
+        return Promise.reject("current browser is not supported for screen sharing. Use latest Chrome/Firefox/Edge");
+    }
+}
+
+export function fetchAudioStream(): Promise<MediaStream> {
+    return navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+}
+
 export function getMediaStream(config: MediaStreamConstraints = { audio: true,  video: { facingMode: "user" } }): Promise < MediaStream > {
     let streamConstraints: Array < MediaStreamConstraints > = [{
         audio: {
