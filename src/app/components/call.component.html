@@ -11,6 +11,9 @@
     <button *ngIf="participants[id].audio" (click)="mute('audio')">Audio mute</button>
     <button *ngIf="!participants[id].video" (click)="unmute('video')">Video unmute</button>
     <button *ngIf="!participants[id].audio" (click)="unmute('audio')">Audio unmute</button>
+    <br>
+    <button  (click)="startRecording()">Start recording</button>
+    <button  (click)="stopRecording()">Stop recording</button>
 </ng-container>
 <br/>
 <div>

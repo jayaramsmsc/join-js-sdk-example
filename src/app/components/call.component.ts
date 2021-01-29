@@ -142,6 +142,26 @@ export class CallComponent implements OnInit {
         });
     }
 
+    public startRecording(){
+        this._conference.startRecording().then(({ status, statusCode }) => {
+            if(status){
+                console.log("recording started")
+            }else{  
+                console.error("recording: ", status, statusCode);
+            }
+        });
+    }
+
+    public stopRecording(){
+        this._conference.stopRecording().then(({ status, statusCode }) => {
+            if(status){
+                console.log("recording stopped")
+            }else{  
+                console.error("recording: ", status, statusCode);
+            }
+        });
+    }
+
     private _clearAllStreams(){
         let selfStream = this.participants[this.id].stream
         if(selfStream){
