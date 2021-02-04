@@ -1,5 +1,4 @@
 import { Component } from '@angular/core';
-import * as Telebu from "join-js-sdk";
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',

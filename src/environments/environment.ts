@@ -5,9 +5,9 @@
 export const environment = {
   production: false,
   apiUrl: "https://join-staging-api1.telebu.com:8001",
-  accessKey: "8e1bbce8-6792-4541-b4e8-ca0bdc17471a",
-  secretKey: "e8de280975ab6244d6c608d764ee61553b534e54028889fa9befc0108f75e01c",
-  "accountId": "fc85cc5698"
+  accessKey: "<your-accesskey>",
+  secretKey: "<your-secret-key>",
+  "accountId": "<account-id>"
 };
 
 /*

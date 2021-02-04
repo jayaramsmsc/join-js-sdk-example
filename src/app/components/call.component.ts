@@ -2,9 +2,10 @@ import { Component, OnInit } from "@angular/core";
 import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
 import { fetchScreenShareStream, getMediaStream, makeRequest, fetchAudioStream } from '../helpers';
-import * as Telebu from "join-js-sdk";
-import { Conference } from 'join-js-sdk/dist/types/conference';
-import { IParticipantDetails } from 'join-js-sdk/dist/types/interfaces';
+// import * as Telebu from "join-js-sdk";
+import * as Telebu from "../lib/telebu";
+import { Conference } from '../lib/types/conference';
+import { IParticipantDetails } from '../lib/types/interfaces';
 
 interface IParticipantSummary {
     name?: string, 
