@@ -27,7 +27,7 @@ interface IParticipants {
 })
 export class CallComponent implements OnInit {
     public participants: IParticipants = {};
-    private _conference: Conference;
+    private _conference: any;
     private _publication: any;
     public id: string; 
     public presenting: boolean = false;
@@ -99,6 +99,7 @@ export class CallComponent implements OnInit {
         if(this._conference){
             this._clearAllStreams();
             this._conference.leave().then((status) => {
+                console.log("leaveeeeeeeee" )
                 if(status){
                     console.log("call left successfully");
                     this._router.navigate(["/"]);
@@ -186,7 +187,7 @@ export class CallComponent implements OnInit {
     }
 
     private _startCall(token: string, id: string, name: string){
-        Telebu.join( token, id, { id, name }).then((conference: Conference) => {
+        Telebu.join( token, id, { id, name }).then((conference: any) => {
             console.log(conference);
             this._conference = conference;
             console.log("Successfully joined");
@@ -200,6 +201,7 @@ export class CallComponent implements OnInit {
                 }
             });
 
+            console.log("before streams");
             conference.remoteStreams.forEach(this._streamAdded.bind(this));
 
             getMediaStream().then((stream) => {
@@ -240,6 +242,19 @@ export class CallComponent implements OnInit {
                 }
             })
 
+            conference.on("leave", (id) => {
+                console.log("part leavee", id);
+                if(id){
+                    let participant = this.participants[id];
+                    if(participant){
+                        if(participant.subscription){
+                            participant.subscription.stop();
+                        }
+                        delete this.participants[id];
+                    }
+                }
+            })
+
             conference.on("serverDisconnected", () => {
                 console.log("server disconnected, pls reconnect");
             });
@@ -253,6 +268,10 @@ export class CallComponent implements OnInit {
                 if(id && this.participants[id]){
                     this.participants[id][mediaType] = value;
                 }
+            });
+
+            conference.on("leave", () => {
+                console.log("leave event ====")
             });
 
         }).catch((err) => {
