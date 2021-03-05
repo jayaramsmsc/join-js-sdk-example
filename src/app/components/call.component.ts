@@ -1,10 +1,11 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, HostListener, OnInit } from "@angular/core";
 import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
 import { fetchScreenShareStream, getMediaStream, makeRequest, fetchAudioStream } from '../helpers';
-import * as Telebu from "join-js-sdk";
-import { Conference } from 'join-js-sdk/dist/types/conference';
-import { IParticipantDetails } from 'join-js-sdk/dist/types/interfaces';
+// import * as Telebu from "join-js-sdk";
+// import { Conference } from 'join-js-sdk/dist/types/conference';
+// import { IParticipantDetails } from 'join-js-sdk/dist/types/interfaces';
+declare var Telebu: any;
 
 interface IParticipantSummary {
     name?: string, 
@@ -14,6 +15,7 @@ interface IParticipantSummary {
     video?: boolean;
     attributes?: object;
     subscription?: any;
+    isStreamActive?: boolean;
 }
 
 interface IParticipants {
@@ -31,6 +33,8 @@ export class CallComponent implements OnInit {
     private _publication: any;
     public id: string; 
     public presenting: boolean = false;
+    public reconnecting: boolean = false;
+    private _publishError: boolean = false;
     constructor(private _route: ActivatedRoute, private _router: Router){
         
     }
@@ -181,9 +185,32 @@ export class CallComponent implements OnInit {
         this._conference.publish(stream, type, 400).then((pub) => {
             console.log("successfully published", pub);
             this._publication = pub;
+
+            // this event will trigger when any error occured during pulication, especially at the time of internet fluctuations 
+            // so after reconnect, we can check whether publication is active or not.
+            // if not active we have to republish the stream again
+            this._publication.addEventListener("error", (res) => {
+                console.error("publication error", res);
+                // republish again
+                this._publishError = true;
+            });
         }).catch((err) => {
             console.error("publication error", err);
         });
+    }
+
+    private _difference(arr1: Array<string>, arr2: Array<string>){
+        return arr1.filter(x => !arr2.includes(x));
+    }
+
+    private _subscribeIfStreamExists(id: string){
+        let stream = this._conference.remoteStreams.find((stream) => {
+            return stream.attributes && stream.attributes["id"] == id
+        });
+
+        if(stream){
+            this._streamAdded(stream);
+        }
     }
 
     private _startCall(token: string, id: string, name: string){
@@ -191,7 +218,7 @@ export class CallComponent implements OnInit {
             console.log(conference);
             this._conference = conference;
             console.log("Successfully joined");
-            conference.participants.forEach((user: IParticipantDetails) => {
+            conference.participants.forEach((user: any) => {
                 console.log("new partic");
                 this.participants[user.id] = {
                     name: user.attributes ? user.attributes["name"] : "",
@@ -199,10 +226,12 @@ export class CallComponent implements OnInit {
                     audio: user.audio,
                     video: user.video
                 }
+                this._subscribeIfStreamExists(user.id);
+                
             });
 
             console.log("before streams");
-            conference.remoteStreams.forEach(this._streamAdded.bind(this));
+            // conference.remoteStreams.forEach(this._streamAdded.bind(this));
 
             getMediaStream().then((stream) => {
                 this._publishStream("camera", stream);
@@ -224,6 +253,8 @@ export class CallComponent implements OnInit {
                         audio: data["audio"],
                         video: data["video"]
                     }
+
+                    this._subscribeIfStreamExists(data["id"]);
                 }
             })
 
@@ -274,13 +305,91 @@ export class CallComponent implements OnInit {
                 console.log("leave event ====")
             });
 
+            conference.on("disconnected", ({ code, message }) => {
+                console.log("disconnected --->");
+                // rejoin the call with new token
+                if (code == 5002) {
+                    // reconnecting attempts failed.
+                    console.error(message);
+                }else if(code == 5004) {
+                    // internet is back but unable to join the call with existing token, have to rejoin the call.
+                    console.log(message)
+                }
+            })
+
+            conference.on("reconnecting", (res) => {
+                // this is triggered when app is trying to reconnect
+                console.log("reconnecting --->", res);
+                this.reconnecting = true;
+            })
+
+            conference.on("reconnected", (res) => {
+                // this event is triggered when app is reconnected
+                // update the UI accordingly
+                // check for the new participants and update the UI
+                // check for the new remote streams and update the UI
+                this.reconnecting = false;
+                console.log("reconnected --- ", res);
+                
+                let newParticipants = conference.participants;
+                let newParticipantsKeys = newParticipants.map(user => user.id);
+                let oldParticipants = this.participants;
+                let oldParticipantsKeys = Object.keys(oldParticipants);
+                let addedParticipants = this._difference(newParticipantsKeys, oldParticipantsKeys);
+                let removedParticipants = this._difference(oldParticipantsKeys, newParticipantsKeys);
+
+                addedParticipants.forEach((id: any) => {
+                    let user = newParticipants.find(participant => participant.id == id);
+                    this.participants[user.id] = {
+                        name: user.attributes ? user.attributes["name"] : "",
+                        attributes: user.attributes ? user.attributes : {},
+                        audio: user.audio,
+                        video: user.video
+                    }
+
+                    conference.remoteStreams.forEach((stream: any) => {
+                        if(stream.attributes && stream.attributes["id"] && stream.attributes["id"] == user.id){
+                            let participant = this.participants[stream.attributes["id"]];
+                            if(participant){
+                                participant.streamCapabilities = stream;
+                                console.log("subscribing on reconnected new part", participant.name)
+                                this._subscribe(stream.attributes["id"], stream);
+                            }
+                        }
+                    });
+                });
+
+                // after reconnection we have to check whether publication is active or not
+                if(this._publishError){
+                    getMediaStream().then((stream) => {
+                        this._publishStream("camera", stream);
+                        this._publishError = false;
+                    });
+                }
+
+                // remove all disconnected participants
+                removedParticipants.forEach((id: string) => {
+                    console.log("removing ::: ", this.participants[id].name);
+                    delete this.participants[id];
+                })
+
+                // check existing participants streams condition, if stream is not active, resubscribe it
+                Object.keys(this.participants).forEach((participantId) => {
+                    let participant = this.participants[participantId];
+                    if(participantId != this.id && !participant.isStreamActive){
+                        // resubscribe
+                        this._subscribe(participantId, participant.stream);
+                    }
+                })
+            });
+
         }).catch((err) => {
             console.error(err);
         });
     }
 
     private _streamAdded(stream: any){
-        console.log("stream added");
+        console.log("stream added", stream);
         if(stream.attributes && stream.attributes["id"] && stream.attributes["id"] != this.id){
             let participant = this.participants[stream.attributes["id"]];
             if(participant){
@@ -295,8 +404,15 @@ export class CallComponent implements OnInit {
         this._conference.subscribe(stream).then((subscription: any) => {
             this.participants[id].subscription = subscription;
             this.participants[id].stream = stream.mediaStream;
+            this.participants[id].isStreamActive = true;
+
+            subscription.addEventListener("error", (err) => {
+                // this event is triggered when subscription got failed.
+                // helpful during internet reconnections
+                this.participants[id].isStreamActive = false;
+            })
         }).catch((err) => {
-            console.error("subscription error");
+            console.error("subscription error",this.participants[id].name);
         });
     }
 }

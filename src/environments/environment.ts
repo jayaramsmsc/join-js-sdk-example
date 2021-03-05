@@ -4,10 +4,15 @@
 
 export const environment = {
   production: false,
-  apiUrl: "https://join-staging-api1.telebu.com:8001",
-  accessKey: "8e1bbce8-6792-4541-b4e8-ca0bdc17471a",
-  secretKey: "e8de280975ab6244d6c608d764ee61553b534e54028889fa9befc0108f75e01c",
-  "accountId": "fc85cc5698"
+  apiUrl: "https://join-staging-api1.telebu.com",
+  // apiUrl: "https://192.168.0.106:8001",
+  accessKey: "your access key",
+  secretKey: "your secret key",
+  "accountId": "your account id"
+  // local
+  // accessKey: "357b5592-aed0-4b48-b7bc-f4604df7e89e",
+  // secretKey: "a39ddbc4fa49f00b3cb5a8781d602a608404793e10b612195d3408c2c5af0421",
+  // "accountId": "fed435f7dd"
 };
 
 /*
