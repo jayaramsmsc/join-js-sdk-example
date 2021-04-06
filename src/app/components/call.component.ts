@@ -31,6 +31,8 @@ export class CallComponent implements OnInit {
     private _publication: any;
     public id: string; 
     public presenting: boolean = false;
+    public activeSpeakerName: string;
+
     constructor(private _route: ActivatedRoute, private _router: Router){
         
     }
@@ -224,6 +226,14 @@ export class CallComponent implements OnInit {
                         audio: data["audio"],
                         video: data["video"]
                     }
+                }
+            })
+
+            conference.on('activeAudioStreamChanged', (activeStreamId) => {
+                const activeStream = this._conference.remoteStreams.find(stream => stream.id == activeStreamId);
+
+                if (activeStream) {
+                    this.activeSpeakerName = activeStream.attributes.name;
                 }
             })
 
